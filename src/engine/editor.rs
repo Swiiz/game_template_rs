@@ -9,12 +9,10 @@ use egui_winit::{
 use wgpu::{LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, StoreOp};
 use winit::event::WindowEvent;
 
-use crate::{
-    GameState,
-    graphics::{self, Frame},
-};
+use super::graphics::{self, Frame};
+use crate::{GameState, engine::maths::Vec3f};
 
-pub struct Editor {
+pub(super) struct Editor {
     init: bool,
     repaint: bool,
     vinfo: ViewportInfo,
@@ -155,4 +153,43 @@ impl std::fmt::Debug for Editor {
             .field("vinfo", &self.vinfo)
             .finish()
     }
+}
+
+pub fn colored_vec3_label(ui: &mut egui::Ui, label_prefix: &str, vec: &Vec3f) {
+    ui.horizontal(|ui| {
+        ui.label(label_prefix);
+        ui.label(egui::RichText::new("X:").color(egui::Color32::from_rgb(255, 69, 0))); // Red-Orange
+        ui.label(
+            egui::RichText::new(format!("{:.2}", vec.x)).color(egui::Color32::from_rgb(255, 69, 0)),
+        );
+        ui.label(egui::RichText::new("Y:").color(egui::Color32::from_rgb(50, 205, 50))); // Lime Green
+        ui.label(
+            egui::RichText::new(format!("{:.2}", vec.y))
+                .color(egui::Color32::from_rgb(50, 205, 50)),
+        );
+        ui.label(egui::RichText::new("Z:").color(egui::Color32::from_rgb(30, 144, 255))); // Dodger Blue
+        ui.label(
+            egui::RichText::new(format!("{:.2}", vec.z))
+                .color(egui::Color32::from_rgb(30, 144, 255)),
+        );
+    });
+}
+
+pub fn colored_f32_label(ui: &mut egui::Ui, label_prefix: &str, value: f32, color: egui::Color32) {
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new(label_prefix));
+        ui.label(egui::RichText::new(format!("{:.2}", value)).color(color));
+    });
+}
+
+pub fn bool_label(ui: &mut egui::Ui, label_prefix: &str, value: bool) {
+    let color = if value {
+        egui::Color32::from_rgb(0, 255, 0) // Bright Green
+    } else {
+        egui::Color32::from_rgb(255, 0, 0) // Bright Red
+    };
+    ui.horizontal(|ui| {
+        ui.label(label_prefix);
+        ui.label(egui::RichText::new(format!("{}", value)).color(color));
+    });
 }

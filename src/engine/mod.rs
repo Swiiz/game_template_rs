@@ -1,20 +1,24 @@
 use std::sync::Arc;
 
-use winit::{application::ApplicationHandler, event_loop::ControlFlow};
-use winit::window::{Window, WindowAttributes, WindowId};
 use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::window::{Window, WindowAttributes, WindowId};
+use winit::{application::ApplicationHandler, event_loop::ControlFlow};
 use winit::{
     event::{DeviceEvent, DeviceId, WindowEvent},
     window::CursorGrabMode,
 };
 
+use crate::GameState;
 #[cfg(debug_assertions)]
-use crate::editor::Editor;
-use crate::{
-    GameState,
-    graphics::{Graphics, renderer::Renderer},
-    inputs::Inputs,
-};
+use editor::Editor;
+use graphics::{Graphics, renderer::Renderer};
+use inputs::Inputs;
+
+pub mod controller;
+pub mod editor;
+pub mod graphics;
+pub mod inputs;
+pub mod maths;
 
 #[derive(Default, Debug)]
 pub struct App {
@@ -26,40 +30,39 @@ pub struct App {
 
 #[derive(Debug)]
 pub struct AppContext {
-    pub update: bool,
+    update: bool,
 
-    cursor_grab_mode: CursorGrabMode,
-    cursor_visible: bool,
+    cursor_enabled: bool,
 }
 
 impl Default for AppContext {
     fn default() -> Self {
         Self {
             update: false,
-            cursor_grab_mode: CursorGrabMode::None,
-            cursor_visible: true,
+            cursor_enabled: true,
         }
     }
 }
 impl AppContext {
-    pub fn set_cursor_grab(&mut self, confine: bool) {
-        if confine {
-            self.cursor_grab_mode = CursorGrabMode::Confined;
-        } else {
-            self.cursor_grab_mode = CursorGrabMode::None;
-        }
+    pub fn set_cursor_enabled(&mut self, cursor_enabled: bool) {
+        self.update = cursor_enabled ^ self.cursor_enabled;
+        self.cursor_enabled = cursor_enabled;
     }
-    pub fn get_cursor_grab(&self) -> bool {
-        self.cursor_grab_mode == CursorGrabMode::Confined
+    pub fn is_cursor_enabled(&self) -> bool {
+        self.cursor_enabled
     }
 
     fn update(&mut self, window: &Window) {
         if self.update {
             window
-                .set_cursor_grab(self.cursor_grab_mode)
+                .set_cursor_grab(if self.cursor_enabled {
+                    CursorGrabMode::None
+                } else {
+                    CursorGrabMode::Confined
+                })
                 .unwrap_or_else(|_| println!("Failed to set cursor grab"));
 
-            window.set_cursor_visible(self.cursor_visible);
+            window.set_cursor_visible(self.cursor_enabled);
             self.update = false;
         }
     }
@@ -72,7 +75,7 @@ pub struct Viewport {
     pub renderer: Renderer,
 
     #[cfg(debug_assertions)]
-    pub editor: Editor,
+    editor: Editor,
 }
 
 impl App {
@@ -117,6 +120,7 @@ impl ApplicationHandler for App {
                 .editor
                 .on_window_event_consume(&viewport.window, &event)
             {
+                println!("a");
                 return;
             }
 
@@ -148,6 +152,7 @@ impl ApplicationHandler for App {
                     viewport
                         .graphics
                         .resize(viewport.window.inner_size().into());
+                    viewport.renderer.on_resize(&viewport.graphics);
                 }
                 WindowEvent::CloseRequested => {
                     event_loop.exit();
@@ -157,12 +162,7 @@ impl ApplicationHandler for App {
         }
     }
 
-    fn device_event(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        device_id: DeviceId,
-        event: DeviceEvent,
-    ) {
+    fn device_event(&mut self, _: &ActiveEventLoop, _: DeviceId, event: DeviceEvent) {
         self.inputs.process_device_event(&event);
 
         #[cfg(debug_assertions)]
@@ -173,7 +173,9 @@ impl ApplicationHandler for App {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, _: &ActiveEventLoop) {
+        self.inputs.end_step();
+
         self.state.update(&mut self.ctx, &self.inputs);
         if let Some(viewport) = &mut self.viewport {
             self.ctx.update(&viewport.window);

@@ -4,9 +4,27 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# ...
+
+### Engine dependencies ###
+
+# Maths
+nalgebra = "0.34.0"
+
+# Platform
+pollster = "0.4.0"
+winit = "0.30.12"
+
+# Graphics
+wgpu = "25.0.0"
+slotmap = "1.0.7"
+bytemuck = "1.23.2"
+
+# Debug UI
 egui = "0.32.0"
 egui-wgpu = "0.32.0"
 egui-winit = "0.32.0"
-pollster = "0.4.0"
-wgpu = "25.0.0"
-winit = "0.30.12"
+
+# Assets
+image = "0.25.6"
+

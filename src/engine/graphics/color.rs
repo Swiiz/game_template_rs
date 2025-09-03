@@ -1,12 +1,14 @@
 #[repr(C)]
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
-pub struct Color3 {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
+pub struct Color3<T> {
+    pub r: T,
+    pub g: T,
+    pub b: T,
 }
 
-impl Into<wgpu::Color> for Color3 {
+pub type Color3f = Color3<f32>;
+
+impl Into<wgpu::Color> for Color3f {
     fn into(self) -> wgpu::Color {
         wgpu::Color {
             r: self.r as f64,
@@ -17,19 +19,19 @@ impl Into<wgpu::Color> for Color3 {
     }
 }
 
-impl Into<[f32; 3]> for Color3 {
+impl Into<[f32; 3]> for Color3f {
     fn into(self) -> [f32; 3] {
         [self.r, self.g, self.b]
     }
 }
 
-impl Into<[f32; 4]> for Color3 {
+impl Into<[f32; 4]> for Color3f {
     fn into(self) -> [f32; 4] {
         [self.r, self.g, self.b, 1.]
     }
 }
 
-impl Color3 {
+impl Color3f {
     pub const WHITE: Self = Self::splat(1.0);
     pub const BLACK: Self = Self::splat(0.0);
     pub const RED: Self = Self::new(1.0, 0.0, 0.0);
@@ -48,34 +50,42 @@ impl Color3 {
     }
 
     pub fn array_mut(&mut self) -> &mut [f32; 3] {
+        // SAFETY: The struct is #[repr(C)] and is memory equivalent to [f32 ; 3]
         unsafe { std::mem::transmute(self) }
+    }
+
+    pub fn to_srgba_unorm(&self) -> [u8; 4] {
+        let r = (self.r * 255.0).clamp(0.0, 255.0) as u8;
+        let g = (self.g * 255.0).clamp(0.0, 255.0) as u8;
+        let b = (self.b * 255.0).clamp(0.0, 255.0) as u8;
+        [r, g, b, 255]
     }
 }
 
-impl std::ops::Mul<f32> for Color3 {
-    type Output = Color3;
+impl std::ops::Mul<f32> for Color3f {
+    type Output = Color3f;
     fn mul(self, rhs: f32) -> Self::Output {
         Color3::new(self.r * rhs, self.g * rhs, self.b * rhs)
     }
 }
 
-impl std::ops::Mul<Color3> for f32 {
-    type Output = Color3;
-    fn mul(self, rhs: Color3) -> Self::Output {
+impl std::ops::Mul<Color3f> for f32 {
+    type Output = Color3f;
+    fn mul(self, rhs: Color3f) -> Self::Output {
         Color3::new(self * rhs.r, self * rhs.g, self * rhs.b)
     }
 }
 
-impl std::ops::Add for Color3 {
-    type Output = Color3;
-    fn add(self, rhs: Color3) -> Self::Output {
+impl std::ops::Add for Color3f {
+    type Output = Color3f;
+    fn add(self, rhs: Color3f) -> Self::Output {
         Color3::new(self.r + rhs.r, self.g + rhs.g, self.b + rhs.b)
     }
 }
 
-impl std::ops::Sub for Color3 {
-    type Output = Color3;
-    fn sub(self, rhs: Color3) -> Self::Output {
-        Color3::new(self.r - rhs.r, self.g - rhs.g, self.b - rhs.b)
+impl std::ops::Sub for Color3f {
+    type Output = Color3f;
+    fn sub(self, rhs: Color3f) -> Self::Output {
+        Color3f::new(self.r - rhs.r, self.g - rhs.g, self.b - rhs.b)
     }
 }
